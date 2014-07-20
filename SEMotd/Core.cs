@@ -15,6 +15,7 @@ using Sandbox.Common.ObjectBuilders.VRageData;
 
 using SEModAPIExtensions.API.Plugin;
 using SEModAPIExtensions.API.Plugin.Events;
+using SEModAPIExtensions.API;
 
 using SEModAPIInternal.API.Common;
 using SEModAPIInternal.API.Entity;
@@ -34,12 +35,15 @@ using VRage.Common.Utils;
 namespace PhysicsAsteroidsPlugin
 {
 	[Serializable()]
-	public class SEMotd : PluginBase : IChatEventHandler
+	public class SEMotd : PluginBase, IChatEventHandler
 	{
 		
 		#region "Attributes"
 		[field: NonSerialized()]
 		private string m_motd = "";
+		[field: NonSerialized()]
+		private DateTime m_lastupdate;
+		
 
 		#endregion
 
@@ -55,6 +59,7 @@ namespace PhysicsAsteroidsPlugin
 		
 			Console.WriteLine("PhysicsAsteroidPlugin '" + Id.ToString() + "' initialized!");
 			loadXML();
+			m_lastupdate = DateTime.UtcNow;
 		}
 
 		#endregion
@@ -117,12 +122,21 @@ namespace PhysicsAsteroidsPlugin
 
 		}
 
+		public void sendMotd()
+		{
+			ChatManager.Instance.SendPublicChatMessage(m_motd);
+		}
+
 		#region "EventHandlers"
 
 		public override void Update()
 		{
 			//prevent multiple update threads to run at once.
-			
+			if(m_lastupdate + TimeSpan.FromMinutes(5) < DateTime.UtcNow )
+			{
+				m_lastupdate = DateTime.UtcNow;
+				sendMotd();
+			}
 		}
 
 		public override void Shutdown()
@@ -131,12 +145,20 @@ namespace PhysicsAsteroidsPlugin
 			return;
 		}
 
-		public override void OnChatReceived(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
+		public void OnChatReceived(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
+			if ( obj.message.ToLower() == "motd")
+			{
+				if(m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow )
+				{
+					m_lastupdate = DateTime.UtcNow;
+					sendMotd();
+				}
+			}
 			return; //no handling for motd right now
 		}
 
-		public override void OnChatSent(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
+		public void OnChatSent(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
 			return; //no handling for motd right now
 		}
