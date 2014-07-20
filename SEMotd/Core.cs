@@ -143,7 +143,7 @@ namespace SEMotd
 
 		public void sendMotd()
 		{
-			if(m_enable)
+			//if(m_enable)
 				ChatManager.Instance.SendPublicChatMessage(m_motd);
 		}
 
@@ -155,7 +155,8 @@ namespace SEMotd
 			if(m_lastupdate + TimeSpan.FromSeconds(m_interval) < DateTime.UtcNow )
 			{
 				m_lastupdate = DateTime.UtcNow;
-				sendMotd();
+				if(m_enable)
+					sendMotd();
 			}
 		}
 
@@ -167,10 +168,18 @@ namespace SEMotd
 
 		public void OnChatReceived(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
-			if( obj.message[0].Equals("/"))
+
+			if (obj.sourceUserId == 0)
+				return;
+			bool isadmin = SandboxGameAssemblyWrapper.Instance.IsUserAdmin(obj.sourceUserId);
+
+			if( obj.message[0] == '.' )
 			{
+
+				string[] words = obj.message.Split(' ');
+				string rem;
 				//proccess
-				if (obj.message.ToLower() == "/motd")
+				if (words[0] == ".motd")
 				{
 					if (m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
 					{
@@ -180,18 +189,29 @@ namespace SEMotd
 					}
 				}
 				
-				/*
-				if (obj.message.Substring(0,10) == "/set motd ")
+				if(words.Count() > 1)
+					if (isadmin && words[0] == ".set" && words[1] == "motd")
+					{
+						rem = String.Join(" ", words, 2, words.Count() - 2);
+						m_motd = rem;
+						LogManager.APILog.WriteLineAndConsole("Motd set: " + m_motd);
+						sendMotd();
+						return;
+					}
+
+				if (isadmin && words[0] == ".motd-enable")
 				{
-					m_motd = obj.message.Substring(11);
-					LogManager.APILog.WriteLineAndConsole("Motd set:" + m_motd);
-					sendMotd();
+					m_enable = true;
 					return;
-				}*/
+				}
+
+				if (isadmin && words[0] == ".motd-disable")
+				{
+					m_enable = false;
+					return;
+				}
 			}
-
-
-			return; //no handling for motd right now
+			return; 
 		}
 
 		public void OnChatSent(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
