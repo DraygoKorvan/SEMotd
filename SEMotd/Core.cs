@@ -32,7 +32,7 @@ using VRage.Common.Utils;
 
 
 
-namespace PhysicsAsteroidsPlugin
+namespace SEMotd
 {
 	[Serializable()]
 	public class SEMotd : PluginBase, IChatEventHandler
@@ -43,7 +43,10 @@ namespace PhysicsAsteroidsPlugin
 		private string m_motd = "";
 		[field: NonSerialized()]
 		private DateTime m_lastupdate;
-		
+		[field: NonSerialized()]
+		private double m_interval = 300;
+		[field: NonSerialized()]
+		private bool m_enable = true;	
 
 		#endregion
 
@@ -51,13 +54,14 @@ namespace PhysicsAsteroidsPlugin
 
 		public void Core()
 		{
-			Console.WriteLine("PhysicsAsteroidPlugin '" + Id.ToString() + "' constructed!");	
+			Console.WriteLine("SE Motd Plugin '" + Id.ToString() + "' constructed!");	
 		}
 
 		public override void Init()
 		{
-		
-			Console.WriteLine("PhysicsAsteroidPlugin '" + Id.ToString() + "' initialized!");
+			m_interval = 300;//5 minutes by default
+			m_enable = true;
+			Console.WriteLine("SE Motd Plugin '" + Id.ToString() + "' initialized!");
 			loadXML();
 			m_lastupdate = DateTime.UtcNow;
 		}
@@ -83,12 +87,25 @@ namespace PhysicsAsteroidsPlugin
 			get { return System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\"; }
 		
 		}
-		[Category("Physics Meteor Plugin")]
-		[Description("Set Maximum velocity (does not work yet)")]
+		[Category("SE Motd")]
+		[Description("interval in seconds")]
 		[Browsable(true)]
 		[ReadOnly(false)]
-		
-		
+		public double interval
+		{
+			get { return m_interval; }
+			set { if (m_interval > 0) m_interval = value; }
+		}
+
+		[Category("SE Motd")]
+		[Description("Enabled")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public bool enable
+		{
+			get { if(m_enable) return true; else return false; }
+			set { m_enable = value; }
+		}
 		#endregion
 
 		#region "Methods"
@@ -112,6 +129,8 @@ namespace PhysicsAsteroidsPlugin
 					TextReader reader = new StreamReader(Location + "Configuration.xml");
 					SEMotd obj = (SEMotd)x.Deserialize(reader);
 					motd = obj.motd;
+					interval = obj.interval;
+					enable = obj.enable;
 					reader.Close();
 				}
 			}
@@ -124,7 +143,8 @@ namespace PhysicsAsteroidsPlugin
 
 		public void sendMotd()
 		{
-			ChatManager.Instance.SendPublicChatMessage(m_motd);
+			if(m_enable)
+				ChatManager.Instance.SendPublicChatMessage(m_motd);
 		}
 
 		#region "EventHandlers"
@@ -132,7 +152,7 @@ namespace PhysicsAsteroidsPlugin
 		public override void Update()
 		{
 			//prevent multiple update threads to run at once.
-			if(m_lastupdate + TimeSpan.FromMinutes(5) < DateTime.UtcNow )
+			if(m_lastupdate + TimeSpan.FromSeconds(m_interval) < DateTime.UtcNow )
 			{
 				m_lastupdate = DateTime.UtcNow;
 				sendMotd();
@@ -147,14 +167,30 @@ namespace PhysicsAsteroidsPlugin
 
 		public void OnChatReceived(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
-			if ( obj.message.ToLower() == "motd")
+			if( obj.message[0].Equals("/"))
 			{
-				if(m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow )
+				//proccess
+				if (obj.message.ToLower() == "/motd")
 				{
-					m_lastupdate = DateTime.UtcNow;
-					sendMotd();
+					if (m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
+					{
+						m_lastupdate = DateTime.UtcNow;
+						sendMotd();
+						return;
+					}
 				}
+				
+				/*
+				if (obj.message.Substring(0,10) == "/set motd ")
+				{
+					m_motd = obj.message.Substring(11);
+					LogManager.APILog.WriteLineAndConsole("Motd set:" + m_motd);
+					sendMotd();
+					return;
+				}*/
 			}
+
+
 			return; //no handling for motd right now
 		}
 
