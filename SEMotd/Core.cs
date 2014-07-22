@@ -143,7 +143,7 @@ namespace SEMotd
 
 		public void sendMotd()
 		{
-			//if(m_enable)
+			if(m_motd != "")
 				ChatManager.Instance.SendPublicChatMessage(m_motd);
 		}
 
@@ -173,13 +173,13 @@ namespace SEMotd
 				return;
 			bool isadmin = SandboxGameAssemblyWrapper.Instance.IsUserAdmin(obj.sourceUserId);
 
-			if( obj.message[0] == '.' )
+			if( obj.message[0] == '/' )
 			{
 
 				string[] words = obj.message.Split(' ');
 				string rem;
 				//proccess
-				if (words[0] == ".motd")
+				if (words[0] == "/motd")
 				{
 					if (m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
 					{
@@ -190,7 +190,7 @@ namespace SEMotd
 				}
 				
 				if(words.Count() > 1)
-					if (isadmin && words[0] == ".set" && words[1] == "motd")
+					if (isadmin && words[0] == "/set" && words[1] == "motd")
 					{
 						rem = String.Join(" ", words, 2, words.Count() - 2);
 						m_motd = rem;
@@ -199,13 +199,13 @@ namespace SEMotd
 						return;
 					}
 
-				if (isadmin && words[0] == ".motd-enable")
+				if (isadmin && words[0] == "/motd-enable")
 				{
 					m_enable = true;
 					return;
 				}
 
-				if (isadmin && words[0] == ".motd-disable")
+				if (isadmin && words[0] == "/motd-disable")
 				{
 					m_enable = false;
 					return;
