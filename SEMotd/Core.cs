@@ -35,18 +35,43 @@ using VRage.Common.Utils;
 namespace SEMotd
 {
 	[Serializable()]
-	public class SEMotd : PluginBase, IChatEventHandler
+	public class SEMotdSettings
+	{
+		private string m_rules = "";
+		private string m_motd = "";
+		private double m_interval = 300;
+		private bool m_enable = true;
+
+		public string rules
+		{
+			get	{ return m_rules; }
+			set { m_rules = value; }
+		}
+		public string motd
+		{
+			get { return m_motd; }
+			set { m_motd = value; }
+		}
+		public double interval
+		{
+			get { return m_interval;}
+			set { m_interval = value; }
+		}
+		public bool enable
+		{
+			get { return m_enable; }
+			set { m_enable = value; }
+		}
+	}
+	public class SEMotd : PluginBase, IChatEventHandler , IPlayerEventHandler
 	{
 		
 		#region "Attributes"
-		[field: NonSerialized()]
-		private string m_motd = "";
-		[field: NonSerialized()]
+
+
 		private DateTime m_lastupdate;
-		[field: NonSerialized()]
-		private double m_interval = 300;
-		[field: NonSerialized()]
-		private bool m_enable = true;	
+		private DateTime m_ruleslastupdate;
+		SEMotdSettings settings = new SEMotdSettings();
 
 		#endregion
 
@@ -59,11 +84,12 @@ namespace SEMotd
 
 		public override void Init()
 		{
-			m_interval = 300;//5 minutes by default
-			m_enable = true;
+			settings.interval = 300;
+			settings.enable = true;
 			Console.WriteLine("SE Motd Plugin '" + Id.ToString() + "' initialized!");
 			loadXML();
 			m_lastupdate = DateTime.UtcNow;
+			m_ruleslastupdate = DateTime.UtcNow;
 		}
 
 		#endregion
@@ -76,15 +102,30 @@ namespace SEMotd
 		[ReadOnly(false)]
 		public string motd
 		{
-			get { return m_motd; }
-			set { m_motd = value.ToString(); }
+			get { return settings.motd; }
+			set { settings.motd = value.ToString(); }
 		}
-		
+		[Category("SE Rules")]
+		[Description("Rules")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public string rules
+		{
+			get { return settings.rules; }
+			set { settings.rules = value.ToString(); }
+		}
+		[Browsable(true)]
+		[ReadOnly(true)]
+		public string DefaultLocation
+		{
+			get { return System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\"; }
+
+		}		
 		[Browsable(true)]
 		[ReadOnly(true)]
 		public string Location
 		{
-			get { return System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\"; }
+			get { return SandboxGameAssemblyWrapper.Instance.GetServerConfig().LoadWorld  + "\\"; }
 		
 		}
 		[Category("SE Motd")]
@@ -93,8 +134,8 @@ namespace SEMotd
 		[ReadOnly(false)]
 		public double interval
 		{
-			get { return m_interval; }
-			set { if (m_interval > 0) m_interval = value; }
+			get { return settings.interval; }
+			set { if (value > 0) settings.interval = value; }
 		}
 
 		[Category("SE Motd")]
@@ -103,8 +144,8 @@ namespace SEMotd
 		[ReadOnly(false)]
 		public bool enable
 		{
-			get { if(m_enable) return true; else return false; }
-			set { m_enable = value; }
+			get { if(settings.enable) return true; else return false; }
+			set { settings.enable = value; }
 		}
 		#endregion
 
@@ -113,21 +154,40 @@ namespace SEMotd
 		public void saveXML()
 		{
 
-			XmlSerializer x = new XmlSerializer(typeof(SEMotd));
-			TextWriter writer = new StreamWriter(Location + "Configuration.xml");
-			x.Serialize(writer, this);
+			XmlSerializer x = new XmlSerializer(typeof(SEMotdSettings));
+			TextWriter writer = new StreamWriter(Location + "SEMotd-Config.xml");
+			x.Serialize(writer, settings);
 			writer.Close();
 
 		}
-		public void loadXML()
+		public void loadXML(bool defaults = false)
 		{
 			try
 			{
-				if (File.Exists(Location + "Configuration.xml"))
+				if (File.Exists(Location + "SEMotd-Config.xml") && !defaults)
 				{
-					XmlSerializer x = new XmlSerializer(typeof(SEMotd));
-					TextReader reader = new StreamReader(Location + "Configuration.xml");
-					SEMotd obj = (SEMotd)x.Deserialize(reader);
+
+					XmlSerializer x = new XmlSerializer(typeof(SEMotdSettings));
+					TextReader reader = new StreamReader(Location + "SEMotd-Config.xml");
+					SEMotdSettings obj = (SEMotdSettings)x.Deserialize(reader);
+					motd = obj.motd;
+					interval = obj.interval;
+					enable = obj.enable;
+					reader.Close();
+					return;
+				}
+			}
+			catch (Exception ex)
+			{
+				LogManager.APILog.WriteLineAndConsole("Could not load configuration: " + ex.ToString());
+			}
+			try
+			{
+				if (File.Exists(DefaultLocation + "SEMotd-Config.xml"))
+				{
+					XmlSerializer x = new XmlSerializer(typeof(SEMotdSettings));
+					TextReader reader = new StreamReader(DefaultLocation + "SEMotd-Config.xml");
+					SEMotdSettings obj = (SEMotdSettings)x.Deserialize(reader);
 					motd = obj.motd;
 					interval = obj.interval;
 					enable = obj.enable;
@@ -143,19 +203,22 @@ namespace SEMotd
 
 		public void sendMotd()
 		{
-			if(m_motd != "")
-				ChatManager.Instance.SendPublicChatMessage(m_motd);
+			if(motd != "")
+				ChatManager.Instance.SendPublicChatMessage(motd);
 		}
-
+		public void sendRules()
+		{
+			if (rules != "")
+				ChatManager.Instance.SendPublicChatMessage(rules);
+		}
 		#region "EventHandlers"
 
 		public override void Update()
 		{
-			//prevent multiple update threads to run at once.
-			if(m_lastupdate + TimeSpan.FromSeconds(m_interval) < DateTime.UtcNow )
+			if(m_lastupdate + TimeSpan.FromSeconds(interval) < DateTime.UtcNow )
 			{
 				m_lastupdate = DateTime.UtcNow;
-				if(m_enable)
+				if(enable)
 					sendMotd();
 			}
 		}
@@ -188,26 +251,64 @@ namespace SEMotd
 						return;
 					}
 				}
-				
+				if (words[0] == "/rules")
+				{
+					if (m_ruleslastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
+					{
+						m_ruleslastupdate = DateTime.UtcNow;
+						sendRules();
+						return;
+					}
+				}				
 				if(words.Count() > 1)
+				{ 
 					if (isadmin && words[0] == "/set" && words[1] == "motd")
 					{
 						rem = String.Join(" ", words, 2, words.Count() - 2);
-						m_motd = rem;
-						LogManager.APILog.WriteLineAndConsole("Motd set: " + m_motd);
+						motd = rem;
+						LogManager.APILog.WriteLineAndConsole("Motd set: " + motd);
 						sendMotd();
 						return;
 					}
+					if (isadmin && words[0] == "/set" && words[1] == "rules")
+					{
+						rem = String.Join(" ", words, 2, words.Count() - 2);
+						rules = rem;
+						LogManager.APILog.WriteLineAndConsole("Rules set: " + rules);
+						sendMotd();
+						return;
+					}
+				}
 
 				if (isadmin && words[0] == "/motd-enable")
 				{
-					m_enable = true;
+					enable = true;
 					return;
 				}
 
 				if (isadmin && words[0] == "/motd-disable")
 				{
-					m_enable = false;
+					enable = false;
+					return;
+				}
+
+				if (isadmin && words[0] == "/motd-save")
+				{
+
+					saveXML();
+					ChatManager.Instance.SendPrivateChatMessage(obj.sourceUserId, "Motd Configuration Saved.");
+					return;
+				}
+				if (isadmin && words[0] == "/motd-load")
+				{
+					loadXML(false);
+					ChatManager.Instance.SendPrivateChatMessage(obj.sourceUserId, "Motd Configuration Loaded.");
+					return;
+				}
+				if (isadmin && words[0] == "/motd-loaddefault")
+				{
+					loadXML(true);
+					ChatManager.Instance.SendPrivateChatMessage(obj.sourceUserId, "Motd Configuration Defaults Loaded.");
 					return;
 				}
 			}
@@ -217,6 +318,16 @@ namespace SEMotd
 		public void OnChatSent(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
 			return; //no handling for motd right now
+		}
+
+		public void OnPlayerJoined(ulong nothing, CharacterEntity character)
+		{
+			Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
+			T.Start();
+		}
+		public void OnPlayerLeft(ulong nothing, CharacterEntity character)
+		{
+			return;
 		}
 		#endregion
 
