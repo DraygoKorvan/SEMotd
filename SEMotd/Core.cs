@@ -71,6 +71,8 @@ namespace SEMotd
 
 		private DateTime m_lastupdate;
 		private DateTime m_ruleslastupdate;
+		private Thread mainloop;
+		private bool m_running;
 		SEMotdSettings settings = new SEMotdSettings();
 
 		#endregion
@@ -90,6 +92,11 @@ namespace SEMotd
 			loadXML();
 			m_lastupdate = DateTime.UtcNow;
 			m_ruleslastupdate = DateTime.UtcNow;
+			m_running = true;
+			mainloop = new Thread(main);
+			mainloop.Priority = ThreadPriority.BelowNormal;
+			mainloop.Start();
+
 		}
 
 		#endregion
@@ -200,7 +207,20 @@ namespace SEMotd
 			}
 
 		}
-
+		public void main()
+		{
+			//main execution loop
+			while(m_running)
+			{
+				Thread.Sleep(1000);
+				if (m_lastupdate + TimeSpan.FromSeconds(interval) < DateTime.UtcNow)
+				{
+					m_lastupdate = DateTime.UtcNow;
+					if (enable)
+						sendMotd();
+				}
+			}
+		}
 		public void sendMotd()
 		{
 			if(motd != "")
@@ -215,17 +235,17 @@ namespace SEMotd
 
 		public override void Update()
 		{
-			if(m_lastupdate + TimeSpan.FromSeconds(interval) < DateTime.UtcNow )
-			{
-				m_lastupdate = DateTime.UtcNow;
-				if(enable)
-					sendMotd();
-			}
+
 		}
 
 		public override void Shutdown()
 		{
+			m_running = false;
 			saveXML();
+			//shut down main loop
+			mainloop.Join(1000);
+			mainloop.Abort();
+
 			return;
 		}
 
@@ -322,8 +342,15 @@ namespace SEMotd
 
 		public void OnPlayerJoined(ulong nothing, CharacterEntity character)
 		{
-			Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
-			T.Start();
+			try
+			{
+				Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
+				T.Start();
+			}
+			catch (Exception ex)
+			{
+				LogManager.APILog.WriteLineAndConsole("Could not start private message thread. " + ex.ToString());
+			}
 		}
 		public void OnPlayerLeft(ulong nothing, CharacterEntity character)
 		{
