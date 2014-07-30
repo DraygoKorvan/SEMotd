@@ -41,7 +41,7 @@ namespace SEMotd
 		private string m_motd = "";
 		private double m_interval = 300;
 		private bool m_enable = true;
-
+		private bool m_onJoinMessage = true;
 		public string rules
 		{
 			get	{ return m_rules; }
@@ -61,6 +61,11 @@ namespace SEMotd
 		{
 			get { return m_enable; }
 			set { m_enable = value; }
+		}
+		public bool onJoinMessage
+		{
+			get { return m_onJoinMessage; }
+			set { m_onJoinMessage = value; }
 		}
 	}
 	public class SEMotd : PluginBase, IChatEventHandler , IPlayerEventHandler
@@ -153,6 +158,16 @@ namespace SEMotd
 		{
 			get { if(settings.enable) return true; else return false; }
 			set { settings.enable = value; }
+		}
+
+		[Category("SE Motd")]
+		[Description("On Join Notification")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public bool onJoinMessage
+		{
+			get { if (settings.onJoinMessage) return true; else return false; }
+			set { settings.onJoinMessage = value; }
 		}
 		#endregion
 
@@ -295,7 +310,7 @@ namespace SEMotd
 						rem = String.Join(" ", words, 2, words.Count() - 2);
 						rules = rem;
 						LogManager.APILog.WriteLineAndConsole("Rules set: " + rules);
-						sendMotd();
+						sendRules();
 						return;
 					}
 				}
@@ -342,14 +357,18 @@ namespace SEMotd
 
 		public void OnPlayerJoined(ulong nothing, CharacterEntity character)
 		{
-			try
+			if(onJoinMessage)
 			{
-				Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
-				T.Start();
-			}
-			catch (Exception ex)
-			{
-				LogManager.APILog.WriteLineAndConsole("Could not start private message thread. " + ex.ToString());
+				try
+				{
+					Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
+					T.Start();
+				}
+				catch (Exception ex)
+				{
+					if (SandboxGameAssemblyWrapper.IsDebugging)
+						LogManager.APILog.WriteLineAndConsole("Could not start private message thread. " + ex.ToString());
+				}
 			}
 		}
 		public void OnPlayerLeft(ulong nothing, CharacterEntity character)
