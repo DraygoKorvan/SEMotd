@@ -361,8 +361,11 @@ namespace SEMotd
 			{
 				try
 				{
-					Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
-					T.Start();
+					if (character.SteamId > 0)
+					{
+						Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
+						T.Start();
+					}
 				}
 				catch (Exception ex)
 				{
