@@ -42,6 +42,9 @@ namespace SEMotd
 		private double m_interval = 300;
 		private bool m_enable = true;
 		private bool m_onJoinMessage = true;
+		private int m_motdRepeatSuppress = 60;
+		private int m_rulesRepeatSuppress = 60;
+
 		public string rules
 		{
 			get	{ return m_rules; }
@@ -66,6 +69,16 @@ namespace SEMotd
 		{
 			get { return m_onJoinMessage; }
 			set { m_onJoinMessage = value; }
+		}
+		public int rulesRepeatSuppress
+		{
+			get { return m_rulesRepeatSuppress; }
+			set { if (value > 0) m_rulesRepeatSuppress = value; else m_rulesRepeatSuppress = 1; }
+		}
+		public int motdRepeatSuppress
+		{
+			get { return m_motdRepeatSuppress; }
+			set { if (value > 0) m_motdRepeatSuppress = value; else m_motdRepeatSuppress = 1; }
 		}
 	}
 	public class SEMotd : PluginBase, IChatEventHandler , IPlayerEventHandler
@@ -168,6 +181,24 @@ namespace SEMotd
 		{
 			get { if (settings.onJoinMessage) return true; else return false; }
 			set { settings.onJoinMessage = value; }
+		}
+		[Category("SE Motd")]
+		[Description("Motd Repeat Suppress in seconds. Seconds until MOTD can be repeated")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public int motdRepeatSuppress
+		{
+			get { return settings.motdRepeatSuppress; }
+			set { settings.motdRepeatSuppress = value; }
+		}
+		[Category("SE Motd")]
+		[Description("Rules Repeat Suppress in seconds. Seconds until rules can be repeated")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public int rulesRepeatSuppress
+		{
+			get { return settings.rulesRepeatSuppress; }
+			set { settings.rulesRepeatSuppress = value; }
 		}
 		#endregion
 
@@ -283,7 +314,7 @@ namespace SEMotd
 				//proccess
 				if (words[0] == "/motd")
 				{
-					if (m_lastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
+					if (m_lastupdate + TimeSpan.FromSeconds(motdRepeatSuppress) < DateTime.UtcNow)
 					{
 						m_lastupdate = DateTime.UtcNow;
 						sendMotd();
@@ -292,7 +323,7 @@ namespace SEMotd
 				}
 				if (words[0] == "/rules")
 				{
-					if (m_ruleslastupdate + TimeSpan.FromMinutes(1) < DateTime.UtcNow)
+					if (m_ruleslastupdate + TimeSpan.FromSeconds(rulesRepeatSuppress) < DateTime.UtcNow)
 					{
 						m_ruleslastupdate = DateTime.UtcNow;
 						sendRules();
