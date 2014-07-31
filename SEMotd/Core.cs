@@ -195,6 +195,8 @@ namespace SEMotd
 					motd = obj.motd;
 					interval = obj.interval;
 					enable = obj.enable;
+					rules = obj.rules;
+					onJoinMessage = obj.onJoinMessage;
 					reader.Close();
 					return;
 				}
@@ -213,6 +215,8 @@ namespace SEMotd
 					motd = obj.motd;
 					interval = obj.interval;
 					enable = obj.enable;
+					rules = obj.rules;
+					onJoinMessage = obj.onJoinMessage;
 					reader.Close();
 				}
 			}
