@@ -81,7 +81,7 @@ namespace SEMotd
 			set { if (value > 0) m_motdRepeatSuppress = value; else m_motdRepeatSuppress = 1; }
 		}
 	}
-	public class SEMotd : PluginBase, IChatEventHandler , IPlayerEventHandler
+	public class SEMotd : PluginBase, IChatEventHandler
 	{
 		
 		#region "Attributes"
@@ -390,15 +390,16 @@ namespace SEMotd
 			return; //no handling for motd right now
 		}
 
-		public void OnPlayerJoined(ulong nothing, CharacterEntity character)
+/*		public void OnPlayerJoined(ulong steamid, CharacterEntity character)
 		{
 			if(onJoinMessage)
 			{
+				LogManager.APILog.WriteLineAndConsole("Motd: Player connected, onPlayerJoined fired: " + steamid.ToString());
 				try
 				{
-					if (character.SteamId > 0)
+					if (steamid > 0)
 					{
-						Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(character.SteamId, motd));
+						Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(steamid, motd));
 						T.Start();
 					}
 				}
@@ -410,6 +411,31 @@ namespace SEMotd
 			}
 		}
 		public void OnPlayerLeft(ulong nothing, CharacterEntity character)
+		{
+			return;
+		}*/
+
+		public void OnPlayerJoined(ulong steamId)
+		{
+			if (onJoinMessage)
+			{
+				LogManager.APILog.WriteLineAndConsole("Motd: Player connected, onPlayerJoined fired: " + steamId.ToString());
+				try
+				{
+					if (steamId > 0)
+					{
+						Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(steamId, motd));
+						T.Start();
+					}
+				}
+				catch (Exception ex)
+				{
+					if (SandboxGameAssemblyWrapper.IsDebugging)
+						LogManager.APILog.WriteLineAndConsole("Could not start private message thread. " + ex.ToString());
+				}
+			}
+		}
+		public void OnPlayerLeft(ulong steamId)
 		{
 			return;
 		}
