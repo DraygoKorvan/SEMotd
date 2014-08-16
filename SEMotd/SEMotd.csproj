@@ -41,6 +41,8 @@
   <ItemGroup>
     <Compile Include="Core.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SEMotdEvents.cs" />
+    <Compile Include="SEMotdSettings.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Sandbox.Common">

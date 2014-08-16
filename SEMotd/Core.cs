@@ -34,53 +34,6 @@ using VRage.Common.Utils;
 
 namespace SEMotd
 {
-	[Serializable()]
-	public class SEMotdSettings
-	{
-		private string m_rules = "";
-		private string m_motd = "";
-		private double m_interval = 300;
-		private bool m_enable = true;
-		private bool m_onJoinMessage = true;
-		private int m_motdRepeatSuppress = 60;
-		private int m_rulesRepeatSuppress = 60;
-
-		public string rules
-		{
-			get	{ return m_rules; }
-			set { m_rules = value; }
-		}
-		public string motd
-		{
-			get { return m_motd; }
-			set { m_motd = value; }
-		}
-		public double interval
-		{
-			get { return m_interval;}
-			set { m_interval = value; }
-		}
-		public bool enable
-		{
-			get { return m_enable; }
-			set { m_enable = value; }
-		}
-		public bool onJoinMessage
-		{
-			get { return m_onJoinMessage; }
-			set { m_onJoinMessage = value; }
-		}
-		public int rulesRepeatSuppress
-		{
-			get { return m_rulesRepeatSuppress; }
-			set { if (value > 0) m_rulesRepeatSuppress = value; else m_rulesRepeatSuppress = 1; }
-		}
-		public int motdRepeatSuppress
-		{
-			get { return m_motdRepeatSuppress; }
-			set { if (value > 0) m_motdRepeatSuppress = value; else m_motdRepeatSuppress = 1; }
-		}
-	}
 	public class SEMotd : PluginBase, IChatEventHandler
 	{
 		
@@ -91,6 +44,8 @@ namespace SEMotd
 		private DateTime m_ruleslastupdate;
 		private Thread mainloop;
 		private bool m_running;
+		private uint m_messagecounter = 0;
+		private uint m_currentindex = 0;
 		SEMotdSettings settings = new SEMotdSettings();
 
 		#endregion
@@ -106,11 +61,14 @@ namespace SEMotd
 		{
 			settings.interval = 300;
 			settings.enable = true;
+			settings.events = new List<SEMotdEvents>();
 			Console.WriteLine("SE Motd Plugin '" + Id.ToString() + "' initialized!");
 			loadXML();
 			m_lastupdate = DateTime.UtcNow;
 			m_ruleslastupdate = DateTime.UtcNow;
 			m_running = true;
+			m_messagecounter = 0;
+			m_currentindex = 0;
 			mainloop = new Thread(main);
 			mainloop.Priority = ThreadPriority.BelowNormal;
 			mainloop.Start();
@@ -191,7 +149,7 @@ namespace SEMotd
 			get { return settings.motdRepeatSuppress; }
 			set { settings.motdRepeatSuppress = value; }
 		}
-		[Category("SE Motd")]
+		[Category("SE Rules")]
 		[Description("Rules Repeat Suppress in seconds. Seconds until rules can be repeated")]
 		[Browsable(true)]
 		[ReadOnly(false)]
@@ -199,6 +157,24 @@ namespace SEMotd
 		{
 			get { return settings.rulesRepeatSuppress; }
 			set { settings.rulesRepeatSuppress = value; }
+		}
+		[Category("SE Motd Rotation")]
+		[Description("Rotating Message of the day")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public List<SEMotdEvents> events
+		{
+			get { return settings.events; }
+		}
+
+		[Category("SE Motd Rotation")]
+		[Description("Frequency of rotating message 1 = every other message is from the rotation list, 2 = 2 rotating messages then 1 motd message and so on. 0 turns the rotation off")]
+		[Browsable(true)]
+		[ReadOnly(false)]
+		public uint rotationFrequency
+		{
+			get { return settings.rotatingFrequency; }
+			set { settings.rotatingFrequency = value; }
 		}
 		#endregion
 
@@ -266,10 +242,44 @@ namespace SEMotd
 				if (m_lastupdate + TimeSpan.FromSeconds(interval) < DateTime.UtcNow)
 				{
 					m_lastupdate = DateTime.UtcNow;
+					m_messagecounter++;
 					if (enable)
-						sendMotd();
+					{
+						if (m_messagecounter > rotationFrequency)
+						{
+							sendMotd();
+							m_messagecounter = 0;
+						}
+						else
+							sendRotatingMessage();
+					}
+					
 				}
 			}
+		}
+		public void sendRotatingMessage()
+		{
+
+			if (settings.events.Count > 0)
+			{
+				int count = 0;
+				if (m_currentindex >= settings.events.Count) m_currentindex = 0;
+				foreach (SEMotdEvents seMotdEvent in settings.events)
+				{
+					if (count == m_currentindex)
+					{
+						if (seMotdEvent.message != "")
+							ChatManager.Instance.SendPublicChatMessage(seMotdEvent.ToString());
+						else
+							sendMotd();
+						break;
+					}
+					count++;
+				}
+				m_currentindex++;
+			}
+			else
+				sendMotd();
 		}
 		public void sendMotd()
 		{
