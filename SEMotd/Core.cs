@@ -198,12 +198,7 @@ namespace SEMotd
 
 					XmlSerializer x = new XmlSerializer(typeof(SEMotdSettings));
 					TextReader reader = new StreamReader(Location + "SEMotd-Config.xml");
-					SEMotdSettings obj = (SEMotdSettings)x.Deserialize(reader);
-					motd = obj.motd;
-					interval = obj.interval;
-					enable = obj.enable;
-					rules = obj.rules;
-					onJoinMessage = obj.onJoinMessage;
+					settings = (SEMotdSettings)x.Deserialize(reader);
 					reader.Close();
 					return;
 				}
@@ -218,12 +213,7 @@ namespace SEMotd
 				{
 					XmlSerializer x = new XmlSerializer(typeof(SEMotdSettings));
 					TextReader reader = new StreamReader(DefaultLocation + "SEMotd-Config.xml");
-					SEMotdSettings obj = (SEMotdSettings)x.Deserialize(reader);
-					motd = obj.motd;
-					interval = obj.interval;
-					enable = obj.enable;
-					rules = obj.rules;
-					onJoinMessage = obj.onJoinMessage;
+					settings = (SEMotdSettings)x.Deserialize(reader);
 					reader.Close();
 				}
 			}
