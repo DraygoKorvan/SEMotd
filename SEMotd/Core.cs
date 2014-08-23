@@ -301,10 +301,11 @@ namespace SEMotd
 
 		public void OnChatReceived(SEModAPIExtensions.API.ChatManager.ChatEvent obj)
 		{
-
+			if(SandboxGameAssemblyWrapper.IsDebugging)
+				Console.WriteLine("Onchat Recieved: " + obj.message.ToString());
 			if (obj.sourceUserId == 0)
 				return;
-			bool isadmin = SandboxGameAssemblyWrapper.Instance.IsUserAdmin(obj.sourceUserId);
+			bool isadmin = PlayerManager.Instance.IsUserAdmin(obj.sourceUserId);
 
 			if( obj.message[0] == '/' )
 			{
@@ -389,31 +390,6 @@ namespace SEMotd
 		{
 			return; //no handling for motd right now
 		}
-
-/*		public void OnPlayerJoined(ulong steamid, CharacterEntity character)
-		{
-			if(onJoinMessage)
-			{
-				LogManager.APILog.WriteLineAndConsole("Motd: Player connected, onPlayerJoined fired: " + steamid.ToString());
-				try
-				{
-					if (steamid > 0)
-					{
-						Thread T = new Thread(() => ChatManager.Instance.SendPrivateChatMessage(steamid, motd));
-						T.Start();
-					}
-				}
-				catch (Exception ex)
-				{
-					if (SandboxGameAssemblyWrapper.IsDebugging)
-						LogManager.APILog.WriteLineAndConsole("Could not start private message thread. " + ex.ToString());
-				}
-			}
-		}
-		public void OnPlayerLeft(ulong nothing, CharacterEntity character)
-		{
-			return;
-		}*/
 
 		public void OnPlayerJoined(ulong steamId)
 		{
